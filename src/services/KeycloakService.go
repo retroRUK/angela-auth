@@ -29,20 +29,18 @@ type KeycloakClient struct {
 }
 
 type KeycloakService struct {
-	db           *sql.DB
-	rdb          *redis.Client
-	baseURL      string
-	authURL      string
-	smtpPassword string
+	db      *sql.DB
+	rdb     *redis.Client
+	baseURL string
+	authURL string
 }
 
 func InitKeycloakService(db *sql.DB, rdb *redis.Client) *KeycloakService {
 	return &KeycloakService{
-		db:           db,
-		rdb:          rdb,
-		baseURL:      utilities.GetEnv("KEYCLOAK_BASE_URL"),
-		authURL:      utilities.GetEnv("AUTH_URL"),
-		smtpPassword: utilities.GetEnv("SMTP_PASSWORD"),
+		db:      db,
+		rdb:     rdb,
+		baseURL: utilities.GetEnv("KEYCLOAK_BASE_URL"),
+		authURL: utilities.GetEnv("AUTH_URL"),
 	}
 }
 
