@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/retroruk/centralized-devops-auth/src/services"
@@ -16,7 +18,7 @@ func InitSessionController(mux *http.ServeMux, sessionService *services.SessionS
 		sessionService: sessionService,
 	}
 
-	mux.HandleFunc("/api/v1/auth/session/getUserInfo", c.GetUserInfo)
+	mux.HandleFunc("/api/v1/auth/getUserInfo", c.GetUserInfo)
 }
 
 func (c SessionController) GetUserInfo(w http.ResponseWriter, r *http.Request) {
@@ -28,7 +30,9 @@ func (c SessionController) GetUserInfo(w http.ResponseWriter, r *http.Request) {
 
 	session, err := c.sessionService.GetUserInfo(sessionID)
 	if err != nil {
-		http.Error(w, "failed to retrieve user info", http.StatusInternalServerError)
+		msg := fmt.Sprintf("failed to retrieve user info: %v", err)
+		log.Println(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
 

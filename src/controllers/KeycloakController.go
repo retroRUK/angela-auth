@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/retroRUK/zlog"
 	"github.com/retroruk/centralized-devops-auth/src/models"
 	"github.com/retroruk/centralized-devops-auth/src/services"
 	"github.com/retroruk/centralized-devops-auth/src/utilities"
@@ -13,48 +14,38 @@ import (
 
 type KeycloakController struct {
 	keycloakService *services.KeycloakService
-	backendURL      string
+	backendAPI      string
 }
 
 func InitKeycloakController(mux *http.ServeMux, keycloakService *services.KeycloakService) {
 	c := &KeycloakController{
 		keycloakService: keycloakService,
-		backendURL:      utilities.GetEnv("BACKEND_URL"),
+		backendAPI:      utilities.GetEnv("BACKEND_API"),
 	}
 
-	mux.HandleFunc("/auth/login", c.login)
-	mux.HandleFunc("/auth/logout", c.logout)
-	mux.HandleFunc("/auth/callback/login", c.handleLoginCallback)
-	mux.HandleFunc("/auth/session", c.checkSession)
-	mux.HandleFunc("/auth/refreshToken", c.refreshToken)
-	mux.HandleFunc("/auth/realmExists", c.realmExists)
-	mux.HandleFunc("/auth/createRealm", c.createRealm)
-	mux.HandleFunc("/auth/createClient", c.createClient)
-	mux.HandleFunc("/auth/callback/emailActions", c.handleEmailActionsCallback)
+	mux.HandleFunc("/api/v1/auth/login", c.login)
+	mux.HandleFunc("/api/v1/auth/logout", c.logout)
+	mux.HandleFunc("/api/v1/auth/callback/login", c.handleLoginCallback)
+	mux.HandleFunc("/api/v1/auth/checkSession", c.checkSession)
+	mux.HandleFunc("/api/v1/auth/refreshToken", c.refreshToken)
+	mux.HandleFunc("/api/v1/auth/realmExists", c.realmExists)
+	mux.HandleFunc("/api/v1/auth/createRealm", c.createRealm)
+	mux.HandleFunc("/api/v1/auth/createClient", c.createClient)
+	mux.HandleFunc("/api/v1/auth/callback/emailActions", c.handleEmailActionsCallback)
 }
 
 func (c KeycloakController) login(w http.ResponseWriter, r *http.Request) {
 	realm := r.URL.Query().Get("realm")
 	if realm == "" {
-		http.Redirect(w, r, fmt.Sprintf("%s/?error=invalid_realm", c.backendURL), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("%s/?error=invalid_realm", c.backendAPI), http.StatusFound)
 		return
 	}
 
 	session, sessionID, err := c.keycloakService.CreateSession(realm)
 	if err != nil {
-		http.Redirect(w, r, fmt.Sprintf("%s/?error=invalid_realm", c.backendURL), http.StatusFound)
+		http.Redirect(w, r, fmt.Sprintf("%s/?error=invalid_realm", c.backendAPI), http.StatusFound)
 		return
 	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "sessionID",
-		Value:    sessionID,
-		HttpOnly: true,
-		Secure:   false,
-		Path:     "/",
-		SameSite: http.SameSiteLaxMode,
-		MaxAge:   300,
-	})
 
 	url := session.OauthConfig.AuthCodeURL(sessionID)
 	http.Redirect(w, r, url, http.StatusFound)
@@ -74,53 +65,41 @@ func (c KeycloakController) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c KeycloakController) handleEmailActionsCallback(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, fmt.Sprintf("%s/auth/callback/emailActions", c.backendURL), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/api/v1/auth/callback/emailActions", c.backendAPI), http.StatusFound)
 }
 
 func (c KeycloakController) handleLoginCallback(w http.ResponseWriter, r *http.Request) {
-	sessionID, err := r.Cookie("sessionID")
-	if err != nil {
-		http.Error(w, "Missing state cookie", http.StatusBadRequest)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:   "sessionID",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	})
-
-	if r.URL.Query().Get("state") != sessionID.Value {
-		http.Error(w, "Invalid sessionID", http.StatusBadRequest)
+	sessionID := r.URL.Query().Get("state")
+	if sessionID == "" {
+		zlog.HttpError(w, "missing state param", nil, http.StatusBadRequest)
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "Missing keycloak code", http.StatusBadRequest)
+		zlog.HttpError(w, "missing keycloak code", nil, http.StatusBadRequest)
 		return
 	}
 
-	_, err = c.keycloakService.HandleLoginCallback(sessionID.Value, code)
+	_, err := c.keycloakService.HandleLoginCallback(sessionID, code)
 	if err != nil {
-		http.Error(w, "Failed to handle callback: "+err.Error(), http.StatusInternalServerError)
+		zlog.HttpError(w, "failed login callback", err, http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("%s/auth/callback/login?sessionID=%s", c.backendURL, sessionID.Value), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/api/v1/auth/callback/login?sessionID=%s", c.backendAPI, sessionID), http.StatusFound)
 }
 
 func (c KeycloakController) checkSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("sessionID")
 	if sessionID == "" {
-		http.Error(w, "sessionID paramter is required", http.StatusBadRequest)
+		zlog.HttpError(w, "sessionID param missing", nil, http.StatusBadRequest)
 		return
 	}
 
 	_, err := c.keycloakService.GetSession(sessionID)
 	if err != nil {
-		http.Error(w, "no session exists", http.StatusUnauthorized)
+		zlog.HttpError(w, "no session exists", err, http.StatusUnauthorized)
 		return
 	}
 }

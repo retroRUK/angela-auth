@@ -10,9 +10,9 @@ var env = map[string]string{
 	"DB_NAME":     "postgres",
 	"DB_SSLMODE":  "disable",
 
-	"KEYCLOAK_BASE_URL": "http://localhost:8080",
-	"AUTH_SERVICE_URL":  "http://localhost:5020",
-	"BACKEND_URL":       "http://localhost:5010",
+	"KEYCLOAK_API":     "http://localhost:8080",
+	"AUTH_SERVICE_API": "http://localhost:5020",
+	"BACKEND_API":      "http://localhost:5010",
 }
 
 func GetEnv(key string) string {
