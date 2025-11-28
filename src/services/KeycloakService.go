@@ -494,10 +494,11 @@ func (s KeycloakService) SetupRealmEmail(realm, token, smtpEmail, smtpPassword s
 			Host:            "smtp.gmail.com",
 			Port:            "587",
 			From:            smtpEmail,
-			FromDisplayName: "Angela App",
+			FromDisplayName: "Angela",
 			User:            smtpEmail,
 			Password:        smtpPassword,
 			Auth:            "true",
+			SSL:             "true",
 			StartTLS:        "true",
 			AllowUTF8:       "true",
 		},
@@ -671,7 +672,12 @@ func (s KeycloakService) SendExecuteActionsEmail(realm string, clientID string, 
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusNoContent {
-		msg := fmt.Sprintf("status code: %d", res.StatusCode)
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			zlog.Error("failed to parse res body", err)
+			return err
+		}
+		msg := fmt.Sprintf("status code: %d, error: %s", res.StatusCode, body)
 		zlog.Error(msg, nil)
 		return fmt.Errorf(msg)
 	}

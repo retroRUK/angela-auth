@@ -12,6 +12,7 @@ type KeycloakSmtpServer struct {
 	User            string `json:"user"`
 	Password        string `json:"password"`
 	Auth            string `json:"auth"`
+	SSL             string `json:"ssl"`
 	StartTLS        string `json:"starttls"`
 	AllowUTF8       string `json:"allowUtf8"`
 }
