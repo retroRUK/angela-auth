@@ -1,5 +1,9 @@
 # Angela Auth Service
 
+## Set up required services
+
+- docker compose -f docker-compose.develop.yml up -d
+
 ## How to set up Keycloak
 
 - go to http://localhost:8080
