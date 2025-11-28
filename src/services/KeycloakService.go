@@ -498,7 +498,7 @@ func (s KeycloakService) SetupRealmEmail(realm, token, smtpEmail, smtpPassword s
 			User:            smtpEmail,
 			Password:        smtpPassword,
 			Auth:            "true",
-			SSL:             "true",
+			SSL:             "false",
 			StartTLS:        "true",
 			AllowUTF8:       "true",
 		},
