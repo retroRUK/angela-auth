@@ -55,10 +55,15 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	emailActionService := services.InitEmailActionService()
+
 	controllers.InitKeycloakController(mux, services.InitKeycloakService(db, rdb))
 
 	sessionService := services.InitSessionService(db, rdb)
 	controllers.InitSessionController(mux, sessionService)
+
+	userService := services.InitUserService(db, rdb, emailActionService)
+	controllers.InitUserController(mux, userService)
 
 	log.Println("Server started on port 5020")
 	if err := http.ListenAndServe(":5020", mux); err != nil {
