@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"slices"
 
 	"github.com/coreos/go-oidc"
 	"github.com/redis/go-redis/v9"
@@ -133,6 +134,10 @@ func (s SessionService) LoginCallback(sessionID string, code string) (string, er
 		return sessionID, err
 	}
 
+	now := time.Now()
+	tokens.AccessTokenExp = now.Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	tokens.RefreshTokenExp = now.Add(time.Duration(tokens.RefreshExpiresIn) * time.Second)
+
 	_, err = s.GetClaims(ctx, tokens.IDToken, session.Realm)
 	if err != nil {
 		return sessionID, err
@@ -155,7 +160,7 @@ func (s SessionService) LoginCallback(sessionID string, code string) (string, er
 	session.UserInfo = userInfo
 	session.OauthConfig = nil // set to nil because it's not needed after the callback
 
-	if err := s.SaveSession(sessionID, session, time.Duration(tokens.ExpiresIn*int64(time.Second))); err != nil {
+	if err := s.SaveSession(sessionID, session, time.Duration(tokens.RefreshExpiresIn*int64(time.Second))); err != nil {
 		zlog.Error("failed to save session", err)
 		return sessionID, err
 	}
@@ -233,6 +238,7 @@ func (s SessionService) ExchangeCodeForTokens(ctx context.Context, sessionID str
 	tokens.IDToken = rawIdToken
 	tokens.TokenType = t.TokenType
 	tokens.RefreshToken = t.RefreshToken
+	tokens.RefreshExpiresIn = 1800
 
 	return tokens, nil
 }
@@ -296,8 +302,6 @@ func (s SessionService) getUserInfo(realm string, accessToken string) (models.Ke
 		zlog.Error("failed to decode res body", err)
 		return userInfo, err
 	}
-
-	log.Println(userInfo)
 
 	return userInfo, nil
 }
@@ -395,17 +399,102 @@ func (s SessionService) Logout(sessionID string) error {
 }
 
 func (s SessionService) HasRole(sessionID, role string) (bool, error) {
-	session, err := s.GetSession(sessionID)
+	session, err := s.RefreshSession(sessionID)
 	if err != nil {
 		zlog.Error("failed to get session", err)
 		return false, err
 	}
 
-	for _, r := range session.Claims.ClientRoles[session.Realm].Roles {
-		if r == role {
-			return true, nil
-		}
+	if slices.Contains(session.Claims.ClientRoles[session.Realm].Roles, role) {
+		return true, nil
 	}
 
 	return false, nil
+}
+
+func (s SessionService) RefreshSession(sessionID string) (models.OauthSession, error) {
+	session, err := s.GetSession(sessionID)
+	if err != nil {
+		zlog.Error("failed to get session", err)
+		return models.OauthSession{}, err
+	}
+
+	// if the token expires in less than a minute
+	if time.Until(session.Tokens.AccessTokenExp) > time.Minute {
+		return session, nil
+	}
+
+	tokens, err := s.refreshTokens(session)
+	session.Tokens = tokens
+
+	ctx := context.Background()
+	claims, err := s.GetAccessTokenClaims(ctx, tokens.AccessToken, session.Realm)
+	if err != nil {
+		zlog.Error("failed to get access claims", err)
+	}
+	session.Claims = claims
+
+	if err := s.SaveSession(sessionID, session, time.Duration(tokens.RefreshExpiresIn*int64(time.Second))); err != nil {
+		return models.OauthSession{}, err
+	}
+
+	return session, nil
+}
+
+func (s SessionService) refreshTokens(session models.OauthSession) (models.KeycloakTokens, error) {
+	var clientID, clientSecret string
+	row := s.db.QueryRow("SELECT client_id, client_secret FROM keycloak WHERE realm = $1;", session.Realm)
+	if err := row.Scan(&clientID, &clientSecret); err != nil {
+		return models.KeycloakTokens{}, err
+	}
+
+	form := url.Values{}
+	form.Set("grant_type", "refresh_token")
+	form.Set("client_id", clientID)
+	form.Set("client_secret", clientSecret)
+	form.Set("refresh_token", session.Tokens.RefreshToken)
+
+	url := fmt.Sprintf("%s/realms/%s/protocol/openid-connect/token", s.keycloakAPI, session.Realm)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(form.Encode()))
+	if err != nil {
+		zlog.Error("failed to create request", err)
+		return models.KeycloakTokens{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	res, err := s.client.Do(req)
+	if err != nil {
+		zlog.Error("failed http request", err)
+		return models.KeycloakTokens{}, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			zlog.Error("failed to read error res body", err)
+			return models.KeycloakTokens{}, err
+		}
+		msg := fmt.Sprintf("status code: %d, error: %s", res.StatusCode, string(body))
+		zlog.Error(msg, nil)
+		return models.KeycloakTokens{}, fmt.Errorf(msg)
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		zlog.Error("failed to read res body", err)
+		return models.KeycloakTokens{}, err
+	}
+
+	var tokens models.KeycloakTokens
+	if err := json.Unmarshal(body, &tokens); err != nil {
+		zlog.Error("failed to unmarshal body", err)
+		return models.KeycloakTokens{}, err
+	}
+
+	now := time.Now()
+	tokens.AccessTokenExp = now.Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	tokens.RefreshTokenExp = now.Add(time.Duration(tokens.RefreshExpiresIn) * time.Second)
+
+	return tokens, nil
 }

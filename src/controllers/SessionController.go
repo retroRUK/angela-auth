@@ -143,8 +143,9 @@ func (c SessionController) hasRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]bool{"allowed": allowed}); err != nil {
-		zlog.HttpError(w, "failed to encode response", err, http.StatusInternalServerError)
-		return
+	if allowed {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(http.StatusForbidden)
 	}
 }
