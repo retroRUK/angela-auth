@@ -1,4 +1,4 @@
-module github.com/retroruk/centralized-devops-auth
+module github.com/retroruk/angela-auth
 
 go 1.25.4
 

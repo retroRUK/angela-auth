@@ -11,9 +11,10 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/retroruk/centralized-devops-auth/src/controllers"
-	"github.com/retroruk/centralized-devops-auth/src/services"
-	"github.com/retroruk/centralized-devops-auth/src/utilities"
+	"github.com/retroruk/angela-auth/src/controllers"
+	"github.com/retroruk/angela-auth/src/services"
+	secretServices "github.com/retroruk/angela-auth/src/services/secrets"
+	"github.com/retroruk/angela-auth/src/utilities"
 )
 
 func main() {
@@ -56,14 +57,15 @@ func main() {
 	mux := http.NewServeMux()
 
 	emailActionService := services.InitEmailActionService()
-
-	controllers.InitKeycloakController(mux, services.InitKeycloakService(db, rdb))
-
-	sessionService := services.InitSessionService(db, rdb)
-	controllers.InitSessionController(mux, sessionService)
-
 	userService := services.InitUserService(db, rdb, emailActionService)
+	secretService := secretServices.InitSecretService()
+	realmService := services.InitRealmService(db, userService, emailActionService, secretService)
+	sessionService := services.InitSessionService(db, rdb)
+
+	controllers.InitSessionController(mux, sessionService)
 	controllers.InitUserController(mux, userService)
+	controllers.InitRealmController(mux, realmService)
+	controllers.InitEmailActionController(mux, emailActionService)
 
 	log.Println("Server started on port 5020")
 	if err := http.ListenAndServe(":5020", mux); err != nil {

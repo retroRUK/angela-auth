@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/retroRUK/zlog"
-	"github.com/retroruk/centralized-devops-auth/src/services"
+	"github.com/retroruk/angela-auth/src/services"
 )
 
 type userController struct {

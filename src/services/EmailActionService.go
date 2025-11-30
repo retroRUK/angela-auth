@@ -9,8 +9,8 @@ import (
 	"net/url"
 
 	"github.com/retroRUK/zlog"
-	"github.com/retroruk/centralized-devops-auth/src/models"
-	"github.com/retroruk/centralized-devops-auth/src/utilities"
+	"github.com/retroruk/angela-auth/src/models"
+	"github.com/retroruk/angela-auth/src/utilities"
 )
 
 type EmailActionService struct {
@@ -28,7 +28,7 @@ func InitEmailActionService() *EmailActionService {
 }
 
 func (s EmailActionService) SendExecuteActionsEmail(tenant, clientID, userID, token string, actions []models.EmailAction) error {
-	redirectURI := fmt.Sprintf("%s/api/v1/auth/callback/emailActions", s.authServiceAPI)
+	redirectURI := fmt.Sprintf("%s/api/v1/auth/emailAction/callback", s.authServiceAPI)
 	url := fmt.Sprintf("%s/admin/realms/%s/users/%s/execute-actions-email?client_id=%s&redirect_uri=%s",
 		s.keycloakAPI, tenant, userID, clientID, url.QueryEscape(redirectURI))
 

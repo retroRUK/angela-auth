@@ -7,14 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/retroRUK/zlog"
-	"github.com/retroruk/centralized-devops-auth/src/models"
-	"github.com/retroruk/centralized-devops-auth/src/utilities"
+	"github.com/retroruk/angela-auth/src/models"
+	"github.com/retroruk/angela-auth/src/utilities"
 )
 
 type UserService struct {
@@ -105,6 +104,51 @@ func (s UserService) GetByID(tenant string, id string) (user models.KeycloakUser
 	}
 
 	return user, nil
+}
+
+func (s UserService) GetByUsername(tenant, username, token string) (models.UserRepresentation, error) {
+	if token == "" {
+		adminToken, err := s.LoginAsAdmin()
+		if err != nil {
+			zlog.Error("failed to login as admin", err)
+			return models.UserRepresentation{}, err
+		}
+		token = adminToken
+	}
+
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/admin/realms/%s/users?username=%s", s.keycloakAPI, tenant, username), nil)
+	if err != nil {
+		zlog.Error("failed to create request", err)
+		return models.UserRepresentation{}, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	res, err := s.client.Do(req)
+	if err != nil {
+		zlog.Error("failed http request", err)
+		return models.UserRepresentation{}, err
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		zlog.Error("failed to read res body", err)
+		return models.UserRepresentation{}, err
+	}
+
+	var users []models.UserRepresentation
+	if err := json.Unmarshal(body, &users); err != nil {
+		zlog.Error("failed to unmarshal res body", err)
+		return models.UserRepresentation{}, err
+	}
+
+	if len(users) == 0 {
+		zlog.Error("no users found", nil)
+		return models.UserRepresentation{}, fmt.Errorf("no users found")
+	}
+
+	return users[0], nil
 }
 
 func (s UserService) DeleteByID(tenant string, id string) (err error) {
@@ -210,52 +254,4 @@ func (s UserService) Create(tenant string, email string) (string, error) {
 	}
 
 	return userID, nil
-}
-
-func (s UserService) LoginAsAdmin() (string, error) {
-	return s.Login("admin", "admin", "admin-cli", nil)
-}
-
-func (s UserService) Login(username, password, clientID string, clientSecret *string) (string, error) {
-	form := url.Values{}
-	form.Set("client_id", clientID)
-	form.Set("username", username)
-	form.Set("password", password)
-	form.Set("grant_type", "password")
-
-	if clientSecret != nil {
-		form.Set("client_secret", *clientSecret)
-	}
-
-	url := fmt.Sprintf("%s/realms/master/protocol/openid-connect/token", s.keycloakAPI)
-
-	req, _ := http.NewRequest(http.MethodPost, url, strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	res, err := s.client.Do(req)
-	if err != nil {
-		zlog.Error("failed http req", err)
-		return "", err
-	}
-
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		zlog.Error("failed to read res body", err)
-		return "", err
-	}
-
-	var data struct {
-		AccessToken string `json:"access_token"`
-		TokenType   string `json:"token_type"`
-		ExpiresIn   int    `json:"expires_in"`
-	}
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		zlog.Error("failed to unmarshal data", err)
-		return "", err
-	}
-
-	return data.AccessToken, nil
 }

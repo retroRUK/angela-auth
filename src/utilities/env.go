@@ -14,9 +14,10 @@ var env = map[string]string{
 	"REDIS_PASSWORD": "",
 	"REDIS_DB":       "0",
 
-	"KEYCLOAK_API":     "http://localhost:8080",
-	"AUTH_SERVICE_API": "http://localhost:5020",
-	"BACKEND_API":      "http://localhost:5010",
+	"KEYCLOAK_API":       "http://localhost:8080",
+	"AUTH_SERVICE_API":   "http://localhost:5020",
+	"BACKEND_API":        "http://localhost:5010",
+	"SECRET_SERVICE_API": "http://localhost:5030",
 }
 
 func GetEnv(key string) string {
