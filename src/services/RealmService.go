@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/retroRUK/zlog"
 	"github.com/retroruk/angela-auth/src/models"
@@ -45,6 +46,13 @@ func (s RealmService) Create(tenant, email string) error {
 		return err
 	}
 
+	username, _, found := strings.Cut(email, "@")
+	if !found {
+		msg := "invalid email address"
+		zlog.Error(msg, nil)
+		return fmt.Errorf(msg)
+	}
+
 	payload := models.RealmRepresentation{
 		Realm:   tenant,
 		Enabled: true,
@@ -62,23 +70,20 @@ func (s RealmService) Create(tenant, email string) error {
 				DirectAccessGrantsEnabled: true,
 				ServiceAccountsEnabled:    true,
 				RootURL:                   fmt.Sprintf("%s", s.authServiceAPI),
-				DefaultRoles:              s.getDefaultClientRoles(),
 			},
 		},
 		Users: []models.UserRepresentation{
 			{
-				Username:      "root",
+				Username:      username,
 				Enabled:       true,
 				Email:         email,
 				EmailVerified: false,
-				FirstName:     "Root",
-				LastName:      "User",
 				RequiredActions: []models.EmailAction{
 					models.EmailActions.UpdatePassword,
 					models.EmailActions.VerifyEmail,
 				},
 				ClientRoles: map[string][]string{
-					tenant: s.getDefaultClientRoles(),
+					tenant: s.getAllClientRoles(),
 				},
 			},
 		},
@@ -145,7 +150,7 @@ func (s RealmService) Create(tenant, email string) error {
 		return err
 	}
 
-	user, err := s.userService.GetByUsername(tenant, "root", token)
+	user, err := s.userService.GetByUsername(tenant, username, token)
 	if err != nil {
 		zlog.Error("failed to get user", err)
 		return err
@@ -176,7 +181,7 @@ func (s RealmService) Exists(realm string) (bool, error) {
 	return res.StatusCode == http.StatusOK, nil
 }
 
-func (s RealmService) getDefaultClientRoles() []string {
+func (s RealmService) getAllClientRoles() []string {
 	return []string{
 		"auth::read",
 		"auth::write",

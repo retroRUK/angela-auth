@@ -434,6 +434,7 @@ func (s SessionService) RefreshSession(sessionID string) (models.OauthSession, e
 		zlog.Error("failed to get access claims", err)
 	}
 	session.Claims = claims
+	session.UserInfo.Roles = claims.ClientRoles[session.Realm].Roles
 
 	if err := s.SaveSession(sessionID, session, time.Duration(tokens.RefreshExpiresIn*int64(time.Second))); err != nil {
 		return models.OauthSession{}, err

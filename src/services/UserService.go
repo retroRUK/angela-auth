@@ -201,10 +201,18 @@ func (s UserService) Create(tenant string, email string) (string, error) {
 		return "", fmt.Errorf(msg)
 	}
 
-	payload := models.KeycloakCreateUserRequest{
-		Username: username,
-		Email:    email,
-		Enabled:  true,
+	payload := models.UserRepresentation{
+		Username:      username,
+		Enabled:       true,
+		Email:         email,
+		EmailVerified: false,
+		RequiredActions: []models.EmailAction{
+			models.EmailActions.UpdatePassword,
+			models.EmailActions.VerifyEmail,
+		},
+		ClientRoles: map[string][]string{
+			tenant: s.getDefaultClientRoles(),
+		},
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -254,4 +262,18 @@ func (s UserService) Create(tenant string, email string) (string, error) {
 	}
 
 	return userID, nil
+}
+
+func (s UserService) getDefaultClientRoles() []string {
+	return []string{
+		"auth::read",
+		"auth::write",
+		"auth::delete",
+		"cloud::read",
+		"cloud::write",
+		"cloud::delete",
+		"git::read",
+		"git::write",
+		"git::delete",
+	}
 }
