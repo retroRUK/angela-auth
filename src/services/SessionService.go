@@ -154,6 +154,7 @@ func (s SessionService) LoginCallback(sessionID string, code string) (string, er
 		zlog.Error("failed to get user info", err)
 		return sessionID, err
 	}
+	userInfo.Roles = accessClaims.ClientRoles[session.Realm].Roles
 
 	session.Tokens = tokens
 	session.Claims = accessClaims
