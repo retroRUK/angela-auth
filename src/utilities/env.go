@@ -4,13 +4,13 @@ import "os"
 
 var env = map[string]string{
 	"DB_HOST":     "localhost",
-	"DB_PORT":     "5420",
+	"DB_PORT":     "5432",
 	"DB_USER":     "postgres",
 	"DB_PASSWORD": "password",
 	"DB_NAME":     "postgres",
 	"DB_SSLMODE":  "disable",
 
-	"REDIS_ADDR":     "localhost:6320",
+	"REDIS_ADDR":     "localhost:6379",
 	"REDIS_PASSWORD": "",
 	"REDIS_DB":       "0",
 

@@ -48,6 +48,8 @@ func (c SessionController) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("login", sessionID)
+
 	url := session.OauthConfig.AuthCodeURL(sessionID)
 	http.Redirect(w, r, url, http.StatusFound)
 }
@@ -109,6 +111,8 @@ func (c SessionController) loginCallback(w http.ResponseWriter, r *http.Request)
 		zlog.HttpError(w, "failed login callback", err, http.StatusInternalServerError)
 		return
 	}
+
+	log.Println("callback", sessionID)
 
 	http.Redirect(w, r, fmt.Sprintf("%s/backend/api/v1/auth/session/callback/login?sessionID=%s", c.backendAPI, sessionID), http.StatusFound)
 }

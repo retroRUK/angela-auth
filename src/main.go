@@ -67,15 +67,16 @@ func main() {
 	controllers.InitHealthController(mux)
 
 	log.Println("Server started on port 5020")
-	if err := http.ListenAndServe(":5020", mux); err != nil {
+	if err := http.ListenAndServe(":5020", withCORS(mux)); err != nil {
 		log.Fatal("failed to start server", err)
 	}
 }
 
 func withCORS(h http.Handler) http.Handler {
+	allowOrigins := "*"
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Origin", allowOrigins)
+		w.Header().Set("Access-Control-Allow-Methods", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
