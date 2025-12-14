@@ -63,7 +63,7 @@ func (s SessionService) CreateSession(realm string) (models.OauthSession, string
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 
-	row := s.db.QueryRow("SELECT client_id, client_secret FROM keycloak WHERE realm = $1;", realm)
+	row := s.db.QueryRow("SELECT client_id, client_secret FROM auth.keycloak WHERE realm = $1;", realm)
 	if row.Err() != nil {
 		zlog.Error("failed sql query", row.Err())
 		return models.OauthSession{}, "", row.Err()
@@ -253,7 +253,7 @@ func (s SessionService) ValidateIdToken(ctx context.Context, rawIdToken string, 
 		return nil, false
 	}
 
-	row := s.db.QueryRow("SELECT client_id FROM keycloak WHERE realm = $1", realm)
+	row := s.db.QueryRow("SELECT client_id FROM auth.keycloak WHERE realm = $1", realm)
 	var clientID string
 	if err := row.Scan(&clientID); err != nil {
 		zlog.Error("failed to scan db row", err)
@@ -366,7 +366,7 @@ func (s SessionService) Logout(sessionID string) error {
 
 	var clientID string
 	var clientSecret string
-	row := s.db.QueryRow("SELECT client_id, client_secret FROM keycloak WHERE realm = $1;", session.Realm)
+	row := s.db.QueryRow("SELECT client_id, client_secret FROM auth.keycloak WHERE realm = $1;", session.Realm)
 	if err := row.Scan(&clientID, &clientSecret); err != nil {
 		zlog.Error("failed to scan row", err)
 		return err
@@ -447,7 +447,7 @@ func (s SessionService) RefreshSession(sessionID string) (models.OauthSession, e
 
 func (s SessionService) refreshTokens(session models.OauthSession) (models.KeycloakTokens, error) {
 	var clientID, clientSecret string
-	row := s.db.QueryRow("SELECT client_id, client_secret FROM keycloak WHERE realm = $1;", session.Realm)
+	row := s.db.QueryRow("SELECT client_id, client_secret FROM auth.keycloak WHERE realm = $1;", session.Realm)
 	if err := row.Scan(&clientID, &clientSecret); err != nil {
 		return models.KeycloakTokens{}, err
 	}

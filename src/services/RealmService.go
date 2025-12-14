@@ -133,7 +133,7 @@ func (s RealmService) Create(tenant, email string) error {
 		return fmt.Errorf(msg)
 	}
 
-	row := s.db.QueryRow("INSERT INTO keycloak (client_id, client_secret, realm) VALUES ($1, $2, $3);", tenant, clientSecret, tenant)
+	row := s.db.QueryRow("INSERT INTO auth.keycloak (client_id, client_secret, realm) VALUES ($1, $2, $3);", tenant, clientSecret, tenant)
 	if row.Err() != nil {
 		zlog.Error("failed to insert row", err)
 		return err
