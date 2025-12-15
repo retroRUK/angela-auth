@@ -14,23 +14,23 @@ import (
 )
 
 type EmailActionService struct {
-	authServiceAPI string
-	keycloakAPI    string
-	client         *http.Client
-	publicURL      string
+	authServiceAPI       string
+	keycloakAPI          string
+	client               *http.Client
+	publicAuthServiceAPI string
 }
 
 func InitEmailActionService() *EmailActionService {
 	return &EmailActionService{
-		client:         utilities.NewHttpClient(),
-		keycloakAPI:    utilities.GetEnv("KEYCLOAK_API"),
-		authServiceAPI: utilities.GetEnv("AUTH_SERVICE_API"),
-		publicURL:      utilities.GetEnv("PUBLIC_URL"),
+		client:               utilities.NewHttpClient(),
+		keycloakAPI:          utilities.GetEnv("KEYCLOAK_API"),
+		authServiceAPI:       utilities.GetEnv("AUTH_SERVICE_API"),
+		publicAuthServiceAPI: utilities.GetEnv("PUBLIC_AUTH_SERVICE_API"),
 	}
 }
 
 func (s EmailActionService) SendExecuteActionsEmail(tenant, clientID, userID, token string, actions []models.EmailAction) error {
-	redirectURI := fmt.Sprintf("%s/api/v1/auth/emailAction/callback", s.publicURL)
+	redirectURI := fmt.Sprintf("%s/api/v1/auth/emailAction/callback", s.publicAuthServiceAPI)
 	url := fmt.Sprintf("%s/admin/realms/%s/users/%s/execute-actions-email?client_id=%s&redirect_uri=%s",
 		s.keycloakAPI, tenant, userID, clientID, url.QueryEscape(redirectURI))
 

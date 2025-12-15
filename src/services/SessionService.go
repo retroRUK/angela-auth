@@ -22,22 +22,22 @@ import (
 )
 
 type SessionService struct {
-	db             *sql.DB
-	rdb            *redis.Client
-	client         *http.Client
-	keycloakAPI    string
-	authServiceAPI string
-	publicURL      string
+	db                   *sql.DB
+	rdb                  *redis.Client
+	client               *http.Client
+	keycloakAPI          string
+	authServiceAPI       string
+	publicAuthServiceAPI string
 }
 
 func InitSessionService(db *sql.DB, rdb *redis.Client) *SessionService {
 	return &SessionService{
-		db:             db,
-		rdb:            rdb,
-		client:         utilities.NewHttpClient(),
-		keycloakAPI:    utilities.GetEnv("KEYCLOAK_API"),
-		authServiceAPI: utilities.GetEnv("AUTH_SERVICE_API"),
-		publicURL:      utilities.GetEnv("PUBLIC_URL"),
+		db:                   db,
+		rdb:                  rdb,
+		client:               utilities.NewHttpClient(),
+		keycloakAPI:          utilities.GetEnv("KEYCLOAK_API"),
+		authServiceAPI:       utilities.GetEnv("AUTH_SERVICE_API"),
+		publicAuthServiceAPI: utilities.GetEnv("PUBLIC_AUTH_SERVICE_API"),
 	}
 }
 
@@ -59,7 +59,7 @@ func (s SessionService) GetSession(sessionID string) (models.OauthSession, error
 
 func (s SessionService) CreateSession(realm string) (models.OauthSession, string, error) {
 	oauthConfig := &oauth2.Config{
-		RedirectURL: fmt.Sprintf("%s/api/v1/auth/session/callback/login", s.publicURL),
+		RedirectURL: fmt.Sprintf("%s/api/v1/auth/session/callback/login", s.publicAuthServiceAPI),
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 

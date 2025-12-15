@@ -14,28 +14,28 @@ import (
 )
 
 type RealmService struct {
-	client             *http.Client
-	db                 *sql.DB
-	authServiceAPI     string
-	keycloakAPI        string
-	userService        *UserService
-	emailActionService *EmailActionService
-	smtpEmail          string
-	smtpPassword       string
-	publicURL          string
+	client               *http.Client
+	db                   *sql.DB
+	authServiceAPI       string
+	keycloakAPI          string
+	userService          *UserService
+	emailActionService   *EmailActionService
+	smtpEmail            string
+	smtpPassword         string
+	publicAuthServiceAPI string
 }
 
 func InitRealmService(db *sql.DB, userService *UserService, emailActionService *EmailActionService) *RealmService {
 	return &RealmService{
-		client:             utilities.NewHttpClient(),
-		db:                 db,
-		keycloakAPI:        utilities.GetEnv("KEYCLOAK_API"),
-		authServiceAPI:     utilities.GetEnv("AUTH_SERVICE_API"),
-		userService:        userService,
-		emailActionService: emailActionService,
-		smtpEmail:          utilities.GetEnv("SMTP_EMAIL"),
-		smtpPassword:       utilities.GetEnv("SMTP_PASSWORD"),
-		publicURL:          utilities.GetEnv("PUBLIC_URL"),
+		client:               utilities.NewHttpClient(),
+		db:                   db,
+		keycloakAPI:          utilities.GetEnv("KEYCLOAK_API"),
+		authServiceAPI:       utilities.GetEnv("AUTH_SERVICE_API"),
+		userService:          userService,
+		emailActionService:   emailActionService,
+		smtpEmail:            utilities.GetEnv("SMTP_EMAIL"),
+		smtpPassword:         utilities.GetEnv("SMTP_PASSWORD"),
+		publicAuthServiceAPI: utilities.GetEnv("PUBLIC_AUTH_SERVICE_API"),
 	}
 }
 
@@ -52,12 +52,12 @@ func (s RealmService) Create(tenant, email string) error {
 				Protocol:     "openid-connect",
 				PublicClient: false,
 				RedirectURIs: []string{
-					fmt.Sprintf("%s/api/v1/auth/*", s.publicURL),
+					fmt.Sprintf("%s/api/v1/auth/*", s.publicAuthServiceAPI),
 				},
 				StandardFlowEnabled:       true,
 				DirectAccessGrantsEnabled: true,
 				ServiceAccountsEnabled:    true,
-				RootURL:                   fmt.Sprintf("%s", s.publicURL),
+				RootURL:                   fmt.Sprintf("%s", s.publicAuthServiceAPI),
 			},
 		},
 		Users: []models.UserRepresentation{

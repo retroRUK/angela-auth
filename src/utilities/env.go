@@ -14,10 +14,10 @@ var env = map[string]string{
 	"REDIS_PASSWORD": "",
 	"REDIS_DB":       "0",
 
-	"KEYCLOAK_API":     "http://localhost:8080",
-	"AUTH_SERVICE_API": "http://localhost:5020",
-	"BACKEND_API":      "http://localhost:5010",
-	"PUBLIC_URL":       "http://localhost:5020", // used for redirects in kubernetes, dns/hostname of auth service
+	"KEYCLOAK_API":            "http://localhost:8080",
+	"AUTH_SERVICE_API":        "http://localhost:5020",
+	"PUBLIC_AUTH_SERVICE_API": "http://localhost:5020", // used for redirects
+	"PUBLIC_BACKEND_API":      "http://localhost:5010", // used for redirects
 
 	"SMTP_EMAIL":    "john.rukstalis@gmail.com",
 	"SMTP_PASSWORD": "yblqksffjcjlzbwq",

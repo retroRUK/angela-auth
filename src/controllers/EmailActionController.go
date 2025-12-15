@@ -10,13 +10,13 @@ import (
 
 type EmailActionController struct {
 	emailActionService *services.EmailActionService
-	backendAPI         string
+	publicBackendAPI   string
 }
 
 func InitEmailActionController(mux *http.ServeMux, emailActionService *services.EmailActionService) {
 	c := &EmailActionController{
 		emailActionService: emailActionService,
-		backendAPI:         utilities.GetEnv("BACKEND_API"),
+		publicBackendAPI:   utilities.GetEnv("PUBLIC_BACKEND_API"),
 	}
 
 	sub := http.NewServeMux()
@@ -27,5 +27,5 @@ func InitEmailActionController(mux *http.ServeMux, emailActionService *services.
 }
 
 func (c EmailActionController) callback(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, fmt.Sprintf("%s/backend/api/v1/auth/emailAction/callback", c.backendAPI), http.StatusFound)
+	http.Redirect(w, r, fmt.Sprintf("%s/backend/api/v1/auth/emailAction/callback", c.publicBackendAPI), http.StatusFound)
 }
